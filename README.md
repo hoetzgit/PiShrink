@@ -89,7 +89,6 @@ PiShrink can be ran on Windows using [Windows Subsystem for Linux](https://learn
    echo "alias pishrink='docker run -it --rm --platform linux/amd64 --privileged=true -v \$(pwd):/workdir pishrink'" >> ~/.bashrc && source ~/.bashrc
    ```
    or
-
    ```bash
    # for Apple Silicon with zsh
    echo "alias pishrink='docker run -it --rm --platform linux/arm64 --privileged=true -v \$(pwd):/workdir pishrink'" >> ~/.zshrc && source ~/.zshrc

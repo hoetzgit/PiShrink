@@ -4,7 +4,8 @@
 # Description: PiShrink is a bash script that automatically shrink a pi image that will then resize to the max size of the SD card on boot.
 # Link: https://github.com/Drewsif/PiShrink
 
-version="v24.10.23"
+version="v26.03.16"
+startSeconds=$SECONDS
 
 CURRENT_DIR="$(pwd)"
 SCRIPTNAME="${0##*/}"
@@ -253,7 +254,7 @@ export LANG=POSIX
 
 # check selected compression tool is supported and installed
 if [[ -n $ziptool ]]; then
-	if [[ ! " ${ZIPTOOLS[@]} " =~ $ziptool ]]; then
+	if [[ ! " ${ZIPTOOLS[*]} " =~ $ziptool ]]; then
 		error $LINENO "$ziptool is an unsupported ziptool."
 		exit 17
 	else
@@ -401,17 +402,21 @@ else
     error $LINENO "parted failed with rc $rc"
     exit 14
   fi
+fi
 
-  #Truncate the file
+# Truncate the image file
+info "Checking for unpartitioned space"
+endresult=$(parted -ms "$img" unit B print free)
+rc=$?
+if (( $rc )); then
+  error $LINENO "parted failed with rc $rc"
+  exit 15
+fi
+
+endresult_last=$(tail -1 <<< "$endresult")
+if [[ "$endresult_last" == *free\; ]]; then
   info "Truncating image"
-  endresult=$(parted -ms "$img" unit B print free)
-  rc=$?
-  if (( $rc )); then
-    error $LINENO "parted failed with rc $rc"
-    exit 15
-  fi
-
-  endresult=$(tail -1 <<< "$endresult" | cut -d ':' -f 2 | tr -d 'B')
+  endresult=$(cut -d ':' -f 2 <<< "$endresult_last" | tr -d 'B')
   logVariables $LINENO endresult
   truncate -s "$endresult" "$img"
   rc=$?
@@ -452,4 +457,6 @@ fi
 aftersize=$(ls -lh "$img" | cut -d ' ' -f 5)
 logVariables $LINENO aftersize
 
-info "Shrunk $img from $beforesize to $aftersize"
+finishSeconds=$SECONDS
+elapsedSeconds=$((finishSeconds - startSeconds))
+info "Shrunk $img from $beforesize to $aftersize in $((elapsedSeconds / 60))m $((elapsedSeconds % 60))s"
